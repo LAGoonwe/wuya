@@ -1,0 +1,7 @@
+{
+  "name": "无涯 (Wuya) - 学海无涯",
+  "description": "一个旨在监督用户学习的APP，提供日历打卡、学习笔记管理、学习社区广场及个人中心，助力用户在无涯学海中砥砺前行。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
