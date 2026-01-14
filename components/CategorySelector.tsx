@@ -14,28 +14,52 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
   const [customTag, setCustomTag] = useState('');
   const [showLimitWarning, setShowLimitWarning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const FALLBACK_CATEGORIES: Category[] = [
+    { id: 'lang', name: '语言' },
+    { id: 'tech', name: '技术' },
+    { id: 'books', name: '书籍' },
+    { id: 'math', name: '数学' },
+    { id: 'art', name: '艺术' },
+    { id: 'sci', name: '科学' },
+    { id: 'phil', name: '哲学' },
+    { id: 'hist', name: '历史' },
+  ];
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (retryCount = 0) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('is_custom', false) // Fetch standard categories
+        .eq('is_custom', false)
         .order('id');
 
       if (error) throw error;
-      if (data) {
+
+      if (data && data.length > 0) {
         setCategories(data);
+      } else {
+        // Use fallback if DB is empty (seeding might not have run)
+        console.warn('No categories found in DB, using fallback.');
+        setCategories(FALLBACK_CATEGORIES);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
-      // Fallback or empty
+      if (retryCount < 2) {
+        setTimeout(() => fetchCategories(retryCount + 1), 1000);
+      } else {
+        setCategories(FALLBACK_CATEGORIES);
+      }
     } finally {
-      setLoading(false);
+      if (retryCount >= 2 || categories.length > 0) {
+        setLoading(false);
+      }
     }
   };
 
@@ -143,10 +167,10 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
                     onClick={() => toggleCategory(cat.name)}
                     style={{ animationDelay: `${index * 30}ms` }}
                     className={`group relative flex items-center justify-center h-14 rounded-2xl transition-all duration-300 overflow-hidden animate-in zoom-in-95 fill-mode-both ${isSelected
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2'
-                        : isDisabled
-                          ? 'bg-slate-50 border border-slate-50 text-slate-200 cursor-not-allowed opacity-50'
-                          : 'bg-slate-50 border border-slate-100 text-slate-600 hover:border-indigo-200 hover:bg-white'
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2'
+                      : isDisabled
+                        ? 'bg-slate-50 border border-slate-50 text-slate-200 cursor-not-allowed opacity-50'
+                        : 'bg-slate-50 border border-slate-100 text-slate-600 hover:border-indigo-200 hover:bg-white'
                       }`}
                   >
                     {isSelected && (
@@ -175,8 +199,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
                   value={customTag}
                   onChange={(e) => setCustomTag(e.target.value)}
                   className={`w-full rounded-2xl px-6 py-4 text-sm transition-all outline-none border ${selected.size >= 3
-                      ? 'bg-slate-50 border-transparent text-slate-200 cursor-not-allowed'
-                      : 'bg-slate-50 border-slate-100 text-slate-600 focus:ring-2 focus:ring-indigo-100 focus:bg-white'
+                    ? 'bg-slate-50 border-transparent text-slate-200 cursor-not-allowed'
+                    : 'bg-slate-50 border-slate-100 text-slate-600 focus:ring-2 focus:ring-indigo-100 focus:bg-white'
                     }`}
                   onKeyDown={(e) => e.key === 'Enter' && addCustomTag()}
                 />
@@ -184,8 +208,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
                   onClick={addCustomTag}
                   disabled={selected.size >= 3 || !customTag.trim()}
                   className={`absolute right-3 top-3 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${customTag.trim() && selected.size < 3
-                      ? 'bg-indigo-600 text-white shadow-md rotate-0 scale-100'
-                      : 'bg-slate-200 text-slate-400 rotate-90 scale-90 opacity-50'
+                    ? 'bg-indigo-600 text-white shadow-md rotate-0 scale-100'
+                    : 'bg-slate-200 text-slate-400 rotate-90 scale-90 opacity-50'
                     }`}
                 >
                   <Plus size={20} />
@@ -199,18 +223,29 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
       {/* 底部确认按钮容器 */}
       <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white to-transparent pt-12 z-10">
         <button
-          disabled={selected.size === 0}
-          onClick={() => onConfirm(Array.from(selected))}
-          className={`group relative w-full h-16 rounded-2xl font-bold text-base shadow-2xl transition-all flex items-center justify-center gap-3 overflow-hidden ${selected.size > 0
-              ? 'bg-slate-900 text-white active:scale-95 shadow-slate-200'
-              : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
+          disabled={selected.size === 0 || isSubmitting}
+          onClick={() => {
+            setIsSubmitting(true);
+            onConfirm(Array.from(selected));
+            // Failsafe: if it takes more than 10s, release the button
+            setTimeout(() => setIsSubmitting(false), 10000);
+          }}
+          className={`group relative w-full h-16 rounded-2xl font-bold text-base shadow-2xl transition-all flex items-center justify-center gap-3 overflow-hidden ${selected.size > 0 && !isSubmitting
+            ? 'bg-slate-900 text-white active:scale-95 shadow-slate-200'
+            : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
             }`}
         >
-          {selected.size > 0 && (
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+          {isSubmitting ? (
+            <Loader2 className="animate-spin" size={20} />
+          ) : (
+            <>
+              {selected.size > 0 && (
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+              )}
+              开始无涯之旅
+              <Rocket size={18} className={`${selected.size > 0 ? 'animate-bounce' : ''}`} />
+            </>
           )}
-          开始无涯之旅
-          <Rocket size={18} className={`${selected.size > 0 ? 'animate-bounce' : ''}`} />
         </button>
         <p className="text-center text-[10px] text-slate-400 mt-4 tracking-widest uppercase font-bold opacity-60">
           BOUNDLESS LEARNING · AT MOST 3 TAGS
