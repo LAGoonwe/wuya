@@ -57,9 +57,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
         setCategories(FALLBACK_CATEGORIES);
       }
     } finally {
-      if (retryCount >= 2 || categories.length > 0) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
