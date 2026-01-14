@@ -19,22 +19,22 @@ export default defineConfig(({ mode }) => {
           name: '无涯 - 学海无涯',
           short_name: '无涯',
           description: '专注于学习监督与社区互助的成长平台',
-          theme_color: '#6366f1',
+          theme_color: '#f8fafc',
           icons: [
             {
-              src: 'https://api.dicebear.com/7.x/shapes/svg?seed=wuya&backgroundColor=6366f1',
+              src: '/pwa-icon.png',
               sizes: '192x192',
-              type: 'image/svg+xml'
+              type: 'image/png'
             },
             {
-              src: 'https://api.dicebear.com/7.x/shapes/svg?seed=wuya&backgroundColor=6366f1',
+              src: '/pwa-icon.png',
               sizes: '512x512',
-              type: 'image/svg+xml'
+              type: 'image/png'
             },
             {
-              src: 'https://api.dicebear.com/7.x/shapes/svg?seed=wuya&backgroundColor=6366f1',
+              src: '/pwa-icon.png',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             }
           ],
