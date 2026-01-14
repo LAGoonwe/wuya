@@ -58,7 +58,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             const { data, error } = await supabase.auth.verifyOtp({
                 email,
                 token: code,
-                type: 'magiclink'
+                type: 'email'
             });
 
             if (error) throw error;
