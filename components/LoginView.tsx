@@ -53,22 +53,45 @@ const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         e.preventDefault();
         setLoading(true);
         setMsg('');
+
         try {
-            const { data, error } = await supabase.auth.verifyOtp({
+            // Sequential verification attempt chain
+            // 1. Try 'signup' (Best for first-time users)
+            let result = await supabase.auth.verifyOtp({
                 email,
                 token: code,
-                type: 'magiclink'
+                type: 'signup'
             });
 
-            if (error) throw error;
+            // 2. Fallback to 'email' (Standard OTP)
+            if (result.error) {
+                console.log('Signup verification failed, trying fallback: email');
+                result = await supabase.auth.verifyOtp({
+                    email,
+                    token: code,
+                    type: 'email'
+                });
+            }
 
-            if (data.session) {
+            // 3. Last resort 'magiclink' (Catch-all for some configurations)
+            if (result.error) {
+                console.log('Email verification failed, trying fallback: magiclink');
+                result = await supabase.auth.verifyOtp({
+                    email,
+                    token: code,
+                    type: 'magiclink'
+                });
+            }
+
+            if (result.error) throw result.error;
+
+            if (result.data.session) {
                 onLoginSuccess();
             } else {
                 setMsg('验证失败，请重试');
             }
         } catch (error: any) {
-            console.error(error);
+            console.error('Final verification error:', error);
             setMsg(error.message || '验证码错误或已过期');
         } finally {
             setLoading(false);
