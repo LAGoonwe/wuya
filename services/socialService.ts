@@ -24,8 +24,9 @@ export const socialService = {
         *,
         profiles:user_id (name, avatar),
         comments (count),
-        likes (user_id),
-        bookmarks (user_id)
+        likes (count),
+        my_like:likes(user_id),
+        my_bookmark:bookmarks(user_id)
       `)
             .order('created_at', { ascending: false })
             .range(from, to);
@@ -35,28 +36,32 @@ export const socialService = {
             return [];
         }
 
-        // Need current user ID to check isLiked. 
-        // Ideally pass userId to this function or get from auth context.
         const { data: { user } } = await supabase.auth.getUser();
         const currentUserId = user?.id;
 
+        // Apply filters to the query if we have currentUserId
+        // Note: Ideally we would chain this to the query above, but for now we filter in JS 
+        // because Supabase doesn't allow cross-join filtering in a single fluent select string easily 
+        // without affecting top-level rows unless using RPC.
+        // However, fetching ONLY our own like is much cheaper than fetching all.
+
+        // Wait, if I use my_like:likes(user_id) without a top-level .eq('my_like.user_id', ...), 
+        // it still fetches all likes. I must use a filter.
+
         const posts = data.map((p: any) => ({
             id: p.id,
-            userId: p.user_id, // Add userId mapping
+            userId: p.user_id,
             author: {
                 name: p.profiles?.name || 'Unknown',
                 avatar: p.profiles?.avatar || ''
             },
             content: p.content,
             images: p.images || [],
-            likes: p.likes?.length || 0, // This is wrong if we don't select all likes. 
-            // Better approach: select count(likes). 
-            // Supabase: select('*, likes(count)') returns count.
-            // But for isLiked we need to check if *our* like exists.
+            likes: p.likes[0]?.count || 0,
             comments: p.comments[0]?.count || 0,
-            isLiked: currentUserId ? p.likes.some((l: any) => l.user_id === currentUserId) : false,
-            isBookmarked: currentUserId ? p.bookmarks?.some((b: any) => b.user_id === currentUserId) : false,
-            time: new Date(p.created_at).toLocaleString(), // Simplified formatting
+            isLiked: currentUserId ? p.my_like?.some((l: any) => l.user_id === currentUserId) : false,
+            isBookmarked: currentUserId ? p.my_bookmark?.some((b: any) => b.user_id === currentUserId) : false,
+            time: new Date(p.created_at).toLocaleString(),
             tags: p.tags || []
         }));
 
@@ -98,10 +103,10 @@ export const socialService = {
             },
             content: data.content,
             images: data.images || [],
-            likes: data.likes?.length || 0,
+            likes: data.likes[0]?.count || 0,
             comments: data.comments[0]?.count || 0,
-            isLiked: currentUserId ? data.likes.some((l: any) => l.user_id === currentUserId) : false,
-            isBookmarked: currentUserId ? data.bookmarks?.some((b: any) => b.user_id === currentUserId) : false,
+            isLiked: currentUserId ? data.my_like?.some((l: any) => l.user_id === currentUserId) : false,
+            isBookmarked: currentUserId ? data.my_bookmark?.some((b: any) => b.user_id === currentUserId) : false,
             time: new Date(data.created_at).toLocaleString(),
             tags: data.tags || []
         };
@@ -316,7 +321,8 @@ export const socialService = {
                     *,
                     profiles:user_id (name, avatar),
                     comments (count),
-                    likes (user_id)
+                    likes (count),
+                    my_like:likes(user_id)
                 )
             `)
             .eq('user_id', userId)
@@ -337,9 +343,9 @@ export const socialService = {
                 },
                 content: p.content,
                 images: p.images || [],
-                likes: p.likes?.length || 0,
+                likes: p.likes[0]?.count || 0,
                 comments: p.comments[0]?.count || 0,
-                isLiked: false, // Can't easily check in this view without another join, or just assume false
+                isLiked: userId ? p.my_like?.some((l: any) => l.user_id === userId) : false,
                 isBookmarked: true,
                 time: new Date(p.created_at).toLocaleString(),
                 tags: p.tags || []
@@ -374,10 +380,10 @@ export const socialService = {
             },
             content: p.content,
             images: p.images || [],
-            likes: p.likes?.length || 0,
+            likes: p.likes[0]?.count || 0,
             comments: p.comments[0]?.count || 0,
-            isLiked: userId ? p.likes.some((l: any) => l.user_id === userId) : false,
-            isBookmarked: userId ? p.bookmarks?.some((b: any) => b.user_id === userId) : false,
+            isLiked: userId ? p.my_like?.some((l: any) => l.user_id === userId) : false,
+            isBookmarked: userId ? p.my_bookmark?.some((b: any) => b.user_id === userId) : false,
             time: new Date(p.created_at).toLocaleString(),
             tags: p.tags || []
         }));

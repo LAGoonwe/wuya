@@ -72,7 +72,7 @@ const App: React.FC = () => {
                   title: newNote.title,
                   content: newNote.content,
                   category: newNote.category,
-                  time: new Date(newNote.created_at).toLocaleDateString()
+                  date: new Date(newNote.created_at).toISOString().split('T')[0]
                 },
                 ...prev
               ];

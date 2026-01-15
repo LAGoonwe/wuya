@@ -57,7 +57,7 @@ const HomeView: React.FC<HomeViewProps> = ({ notes, setNotes, user }) => {
 
   const handleAddNote = () => {
     setEditingNote({
-      id: Date.now().toString(),
+      id: 'temp-' + Date.now(),
       title: '',
       content: '',
       category: user.selectedCategories[0] || '学习',
@@ -86,7 +86,7 @@ const HomeView: React.FC<HomeViewProps> = ({ notes, setNotes, user }) => {
       // Actually simpler: just assume if it's in the list it's an update, but we need to track if it's a "new" note being verified.
       // Better strategy: The note ID in handleAddNote is temporary.
 
-      const isNew = !notes.some(n => n.id === editingNote.id && n.id.length > 20); // UUIDs are long
+      const isNew = !notes.some(n => n.id === editingNote.id && !n.id.startsWith('temp-'));
       // OR simpler: check if we are editing an existing note from the list
 
       let savedNote: Note;
