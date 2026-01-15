@@ -43,7 +43,11 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ onConfirm }) => {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setCategories(data);
+        setCategories(data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          isCustom: c.is_custom
+        })));
       } else {
         // Use fallback if DB is empty (seeding might not have run)
         console.warn('No categories found in DB, using fallback.');
