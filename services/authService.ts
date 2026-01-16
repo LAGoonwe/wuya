@@ -66,7 +66,7 @@ export const authService = {
         };
     },
     async updateProfile(userId: string, updates: Partial<UserProfile>) {
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('profiles')
             .upsert({
                 id: userId, // Required for upsert to know which row
@@ -75,31 +75,15 @@ export const authService = {
                 avatar: updates.avatar,
                 selected_categories: updates.selectedCategories,
                 last_active: new Date().toISOString()
-            })
-            .select()
-            .single();
+            });
 
         if (error) throw error;
 
-        // Map back to UserProfile structure
+        // Return the updated profile data
         return {
-            ...updates, // Keep the optimistic updates or whatever we sent
-            // But better to use what DB returned and map it
-            id: data.id,
-            uid: data.uid,
-            name: data.name,
-            bio: data.bio,
-            avatar: data.avatar,
-            selectedCategories: data.selected_categories || [],
-            stats: {
-                // We don't get stats from the update return usually, so we might need to preserve fetching or just return the fields that changed.
-                // However, App.tsx does: setUser(prev => ({ ...prev!, ...updated }))
-                // So returning just the fields that changed + mapped ones is sufficient.
-                // But to be safe and consistent:
-                studyDays: data.study_days || 0,
-                // These counts won't be in the profile row, so we can't return them easily without refetching.
-                // But since we merge in App.tsx, we can omit them and rely on spread.
-            }
-        };
+            ...updates,
+            id: userId
+        } as UserProfile;
+    },
     }
 };
