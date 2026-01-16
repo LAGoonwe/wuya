@@ -84,6 +84,5 @@ export const authService = {
             ...updates,
             id: userId
         } as UserProfile;
-    },
     }
 };
